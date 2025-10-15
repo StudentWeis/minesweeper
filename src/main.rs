@@ -1,34 +1,9 @@
 use bevy::prelude::*;
 use bevy::ui::{BackgroundColor, Interaction, Node};
 
-#[derive(Component)]
-struct MineNode {
-    state: MineState,
-}
+mod mine_node;
 
-enum MineState {
-    Normal,
-    LeftClicked,
-    RightClicked,
-}
-
-impl MineNode {
-    fn get_color(&self) -> Color {
-        match self.state {
-            MineState::Normal => Color::WHITE,
-            MineState::LeftClicked => Color::srgb(1.0, 0.0, 0.0),
-            MineState::RightClicked => Color::srgb(0.0, 0.0, 1.0),
-        }
-    }
-}
-
-impl Default for MineNode {
-    fn default() -> Self {
-        Self {
-            state: MineState::Normal,
-        }
-    }
-}
+use crate::mine_node::{MineNode, MineState};
 
 fn main() {
     App::new()
