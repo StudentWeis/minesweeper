@@ -9,10 +9,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (change_color_on_hover, left_click_system, right_click_system),
-        )
+        .add_systems(Update, (change_color_on_hover, click_system))
         .run();
 }
 
@@ -58,60 +55,43 @@ fn change_color_on_hover(
     }
 }
 
-fn left_click_system(
+/// Handle click events to change the state of MineNode.
+fn click_system(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
     mut query: Query<(&Node, &mut MineNode), With<Button>>,
 ) {
-    if mouse_button_input.just_pressed(MouseButton::Left)
+    if mouse_button_input.any_just_pressed([MouseButton::Left, MouseButton::Right])
         && let Some(cursor_position) = windows.single().unwrap().cursor_position()
     {
         for (node, mut mine_node) in &mut query {
-            let left = if let Val::Px(v) = node.left { v } else { 0.0 };
-            let top = if let Val::Px(v) = node.top { v } else { 0.0 };
-            let width = if let Val::Px(v) = node.width { v } else { 0.0 };
-            let height = if let Val::Px(v) = node.height { v } else { 0.0 };
-
-            if cursor_position.x >= left
-                && cursor_position.x <= left + width
-                && cursor_position.y >= top
-                && cursor_position.y <= top + height
-            {
-                mine_node.state = match mine_node.state {
-                    MineState::LeftClicked => MineState::Normal,
-                    _ => MineState::LeftClicked,
-                };
+            if is_cursor_over_node(cursor_position, node) {
+                if mouse_button_input.just_pressed(MouseButton::Left) {
+                    mine_node.state = match mine_node.state {
+                        MineState::LeftClicked => MineState::Normal,
+                        _ => MineState::LeftClicked,
+                    };
+                } else if mouse_button_input.just_pressed(MouseButton::Right) {
+                    mine_node.state = match mine_node.state {
+                        MineState::RightClicked => MineState::Normal,
+                        _ => MineState::RightClicked,
+                    };
+                }
                 break;
             }
         }
     }
 }
 
-fn right_click_system(
-    mouse_button_input: Res<ButtonInput<MouseButton>>,
-    windows: Query<&Window>,
-    mut query: Query<(&Node, &mut MineNode), With<Button>>,
-) {
-    if mouse_button_input.just_pressed(MouseButton::Right)
-        && let Some(cursor_position) = windows.single().unwrap().cursor_position()
-    {
-        for (node, mut mine_node) in &mut query {
-            let left = if let Val::Px(v) = node.left { v } else { 0.0 };
-            let top = if let Val::Px(v) = node.top { v } else { 0.0 };
-            let width = if let Val::Px(v) = node.width { v } else { 0.0 };
-            let height = if let Val::Px(v) = node.height { v } else { 0.0 };
+/// Check if the cursor is over the given UI node.
+fn is_cursor_over_node(cursor_position: Vec2, node: &Node) -> bool {
+    let left = if let Val::Px(v) = node.left { v } else { 0.0 };
+    let top = if let Val::Px(v) = node.top { v } else { 0.0 };
+    let width = if let Val::Px(v) = node.width { v } else { 0.0 };
+    let height = if let Val::Px(v) = node.height { v } else { 0.0 };
 
-            if cursor_position.x >= left
-                && cursor_position.x <= left + width
-                && cursor_position.y >= top
-                && cursor_position.y <= top + height
-            {
-                mine_node.state = match mine_node.state {
-                    MineState::RightClicked => MineState::Normal,
-                    _ => MineState::RightClicked,
-                };
-                break;
-            }
-        }
-    }
+    cursor_position.x >= left
+        && cursor_position.x <= left + width
+        && cursor_position.y >= top
+        && cursor_position.y <= top + height
 }
