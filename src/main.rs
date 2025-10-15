@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::ui::{BackgroundColor, Interaction, Node};
+use bevy::window::{Window, WindowPlugin};
 
 mod mine_node;
 
@@ -9,7 +10,13 @@ use rand::seq::SliceRandom;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: (500, 500).into(),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_systems(Startup, (setup, calculate_neighbor_bombs).chain())
         .add_systems(Update, (update_node_appearance, click_system, auto_reveal))
         .run();
@@ -17,7 +24,7 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
-    let bomb_distribution = generate_bool_array_with_ratio(256, 60);
+    let bomb_distribution = generate_bool_array_with_ratio(256, 30);
     for x in -8..8 {
         for y in -8..8 {
             commands.spawn((
@@ -26,8 +33,8 @@ fn setup(mut commands: Commands) {
                     width: Val::Px(25.0),
                     height: Val::Px(25.0),
                     position_type: PositionType::Absolute,
-                    left: Val::Px((x as f32 * 30.0) + 400.0),
-                    top: Val::Px((y as f32 * 30.0) + 300.0),
+                    left: Val::Px((x as f32 * 30.0) + 250.0),
+                    top: Val::Px((y as f32 * 30.0) + 250.0),
                     ..default()
                 },
                 BackgroundColor(Color::WHITE),
@@ -133,7 +140,9 @@ fn click_system(
     {
         for (node, mut mine_node) in &mut query {
             if is_cursor_over_node(cursor_position, node) {
-                if mouse_button_input.just_pressed(MouseButton::Left) {
+                if mouse_button_input.just_pressed(MouseButton::Left)
+                    && mine_node.state == MineState::Normal
+                {
                     if mine_node.is_bomb {
                         mine_node.state = MineState::Bombed;
                     } else {
@@ -141,8 +150,9 @@ fn click_system(
                     }
                 } else if mouse_button_input.just_pressed(MouseButton::Right) {
                     mine_node.state = match mine_node.state {
+                        MineState::Normal => MineState::Flaged,
                         MineState::Flaged => MineState::Normal,
-                        _ => MineState::Flaged,
+                        _ => mine_node.state,
                     };
                 }
                 break;
