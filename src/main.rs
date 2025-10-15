@@ -4,20 +4,20 @@ use bevy::ui::{BackgroundColor, Interaction, Node};
 mod mine_node;
 
 use mine_node::{MineNode, MineState};
+use rand::rng;
+use rand::seq::SliceRandom;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_systems(
-            Startup,
-            (setup, add_bombs, calculate_neighbor_bombs).chain(),
-        )
-        .add_systems(Update, (change_color_on_hover, click_system, auto_reveal))
+        .add_systems(Startup, (setup, calculate_neighbor_bombs).chain())
+        .add_systems(Update, (update_node_appearance, click_system, auto_reveal))
         .run();
 }
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2d);
+    let bomb_distribution = generate_bool_array_with_ratio(256, 60);
     for x in -8..8 {
         for y in -8..8 {
             commands.spawn((
@@ -33,7 +33,7 @@ fn setup(mut commands: Commands) {
                 BackgroundColor(Color::WHITE),
                 MineNode {
                     state: MineState::Normal,
-                    is_bomb: false,
+                    is_bomb: bomb_distribution[((x + 8) * 16 + (y + 8)) as usize],
                     position: (x, y),
                     neighbor_bombs: 0,
                 },
@@ -43,17 +43,21 @@ fn setup(mut commands: Commands) {
                     ..default()
                 },
                 TextColor(Color::WHITE),
+                TextLayout {
+                    justify: Justify::Center,
+                    ..default()
+                },
             ));
         }
     }
 }
 
-fn add_bombs(mut query: Query<(&Node, &mut MineNode), With<Button>>) {
-    for (_node, mut mine_node) in &mut query {
-        if rand::random::<f32>() < 0.3 {
-            mine_node.is_bomb = true;
-        }
-    }
+/// Generate a boolean array of given length with a specified number of true values.
+fn generate_bool_array_with_ratio(len: usize, number: usize) -> Vec<bool> {
+    let mut array = vec![true; number];
+    array.extend(vec![false; len - number]);
+    array.shuffle(&mut rng());
+    array
 }
 
 fn calculate_neighbor_bombs(mut query: Query<&mut MineNode>) {
@@ -88,23 +92,33 @@ fn calculate_neighbor_bombs(mut query: Query<&mut MineNode>) {
     }
 }
 
-fn change_color_on_hover(
-    mut query: Query<(&Interaction, &MineNode, &mut BackgroundColor), With<Button>>,
+fn update_node_appearance(
+    mut query: Query<(&Interaction, &MineNode, &mut BackgroundColor, &mut Text), With<Button>>,
 ) {
-    for (interaction, mine_node, mut background_color) in &mut query {
-        if matches!(mine_node.state, MineState::Normal) {
+    for (interaction, mine_node, mut background_color, mut text) in &mut query {
+        background_color.0 = if matches!(mine_node.state, MineState::Normal) {
             match *interaction {
-                Interaction::Hovered => {
-                    background_color.0 = Color::srgb(0.5, 0.5, 0.0);
-                }
-                Interaction::None => {
-                    background_color.0 = Color::WHITE;
-                }
-                _ => {}
+                Interaction::Hovered => Color::srgb(0.5, 0.5, 0.0),
+                Interaction::None => Color::WHITE,
+                _ => Color::WHITE,
             }
         } else {
-            background_color.0 = mine_node.get_color();
-        }
+            mine_node.get_color()
+        };
+
+        // Set text based on state
+        text.0 = match mine_node.state {
+            MineState::Revealed => {
+                if mine_node.neighbor_bombs > 0 {
+                    mine_node.neighbor_bombs.to_string()
+                } else {
+                    String::new()
+                }
+            }
+            MineState::Flaged => "F".to_string(),
+            MineState::Bombed => "B".to_string(),
+            _ => String::new(),
+        };
     }
 }
 
@@ -112,24 +126,23 @@ fn change_color_on_hover(
 fn click_system(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window>,
-    mut query: Query<(&Node, &mut MineNode, &mut Text), With<Button>>,
+    mut query: Query<(&Node, &mut MineNode), With<Button>>,
 ) {
     if mouse_button_input.any_just_pressed([MouseButton::Left, MouseButton::Right])
         && let Some(cursor_position) = windows.single().unwrap().cursor_position()
     {
-        for (node, mut mine_node, mut text) in &mut query {
+        for (node, mut mine_node) in &mut query {
             if is_cursor_over_node(cursor_position, node) {
                 if mouse_button_input.just_pressed(MouseButton::Left) {
                     if mine_node.is_bomb {
-                        mine_node.state = MineState::LeftClicked;
+                        mine_node.state = MineState::Bombed;
                     } else {
                         mine_node.state = MineState::Revealed;
-                        text.0 = mine_node.neighbor_bombs.to_string();
                     }
                 } else if mouse_button_input.just_pressed(MouseButton::Right) {
                     mine_node.state = match mine_node.state {
-                        MineState::RightClicked => MineState::Normal,
-                        _ => MineState::RightClicked,
+                        MineState::Flaged => MineState::Normal,
+                        _ => MineState::Flaged,
                     };
                 }
                 break;
@@ -151,13 +164,13 @@ fn is_cursor_over_node(cursor_position: Vec2, node: &Node) -> bool {
         && cursor_position.y <= top + height
 }
 
-fn auto_reveal(mut query: Query<(&mut MineNode, &mut Text)>) {
+fn auto_reveal(mut query: Query<&mut MineNode>) {
     use std::collections::VecDeque;
 
     let mut queue = VecDeque::new();
 
     // Collect all positions that are Revealed and have 0 neighbor bombs
-    for (mine_node, _) in query.iter() {
+    for mine_node in query.iter() {
         if mine_node.state == MineState::Revealed
             && mine_node.neighbor_bombs == 0
             && !mine_node.is_bomb
@@ -177,10 +190,9 @@ fn auto_reveal(mut query: Query<(&mut MineNode, &mut Text)>) {
                 let ny = pos.1 + dy;
                 if (-8..8).contains(&nx) && (-8..8).contains(&ny) {
                     // Find and reveal the neighbor if it's Normal
-                    for (mut mine_node, mut text) in query.iter_mut() {
+                    for mut mine_node in query.iter_mut() {
                         if mine_node.position == (nx, ny) && mine_node.state == MineState::Normal {
                             mine_node.state = MineState::Revealed;
-                            text.0 = mine_node.neighbor_bombs.to_string();
                             if mine_node.neighbor_bombs == 0 {
                                 queue.push_back((nx, ny));
                             }

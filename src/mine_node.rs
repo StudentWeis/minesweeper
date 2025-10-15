@@ -10,20 +10,18 @@ pub struct MineNode {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum MineState {
-    None,
     Normal,
-    LeftClicked,
-    RightClicked,
+    Bombed,
+    Flaged,
     Revealed,
 }
 
 impl MineNode {
     pub fn get_color(&self) -> Color {
         match self.state {
-            MineState::None => Color::NONE,
             MineState::Normal => Color::WHITE,
-            MineState::LeftClicked => Color::srgb(1.0, 0.0, 0.0),
-            MineState::RightClicked => Color::srgb(0.0, 0.0, 1.0),
+            MineState::Bombed => Color::srgb(1.0, 0.0, 0.0),
+            MineState::Flaged => Color::srgb(0.0, 0.0, 1.0),
             MineState::Revealed => Color::NONE,
         }
     }
