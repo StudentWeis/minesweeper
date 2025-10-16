@@ -1,28 +1,28 @@
 use bevy::prelude::*;
 
 #[derive(Component)]
-pub struct MineNode {
-    pub state: MineState,
+pub struct Cell {
+    pub state: CellState,
     pub is_bomb: bool,
     pub position: (i32, i32),
     pub neighbor_bombs: u8,
 }
 
-impl MineNode {
+impl Cell {
     pub fn get_color(&self) -> Color {
         match self.state {
-            MineState::Normal => Color::WHITE,
-            MineState::Bombed => Color::srgb(1.0, 0.0, 0.0),
-            MineState::Flaged => Color::srgb(0.0, 0.0, 1.0),
-            MineState::Revealed => Color::NONE,
+            CellState::Hidden => Color::WHITE,
+            CellState::Exploded => Color::srgb(1.0, 0.0, 0.0),
+            CellState::Flagged => Color::srgb(0.0, 0.0, 1.0),
+            CellState::Revealed => Color::NONE,
         }
     }
 }
 
-impl Default for MineNode {
+impl Default for Cell {
     fn default() -> Self {
         Self {
-            state: MineState::Normal,
+            state: CellState::Hidden,
             is_bomb: false,
             position: (0, 0),
             neighbor_bombs: 0,
@@ -31,9 +31,9 @@ impl Default for MineNode {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum MineState {
-    Normal,
-    Bombed,
-    Flaged,
+pub enum CellState {
+    Hidden,
+    Exploded,
+    Flagged,
     Revealed,
 }

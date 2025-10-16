@@ -1,0 +1,12 @@
+pub const GRID_WIDTH: usize = 16;
+pub const GRID_HEIGHT: usize = 12;
+pub const GRID_CELLS: usize = GRID_WIDTH * GRID_HEIGHT;
+pub const GRID_WIDTH_HALF: f32 = GRID_WIDTH as f32 / 2.0;
+pub const GRID_HEIGHT_HALF: f32 = GRID_HEIGHT as f32 / 2.0;
+pub const CELL_STRIDE: f32 = 30.0;
+pub const WINDOW_PADDING: f32 = 20.0;
+pub const WINDOW_WIDTH: f32 = GRID_WIDTH as f32 * CELL_STRIDE + WINDOW_PADDING;
+pub const WINDOW_HEIGHT: f32 = GRID_HEIGHT as f32 * CELL_STRIDE + WINDOW_PADDING;
+pub const WINDOW_HALF_WIDTH: f32 = WINDOW_WIDTH / 2.0;
+pub const WINDOW_HALF_HEIGHT: f32 = WINDOW_HEIGHT / 2.0;
+pub const BOMB_COUNT: usize = 30;
