@@ -8,14 +8,6 @@ pub struct MineNode {
     pub neighbor_bombs: u8,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum MineState {
-    Normal,
-    Bombed,
-    Flaged,
-    Revealed,
-}
-
 impl MineNode {
     pub fn get_color(&self) -> Color {
         match self.state {
@@ -36,4 +28,12 @@ impl Default for MineNode {
             neighbor_bombs: 0,
         }
     }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum MineState {
+    Normal,
+    Bombed,
+    Flaged,
+    Revealed,
 }
