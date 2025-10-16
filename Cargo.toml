@@ -2,6 +2,7 @@
 name = "minesweeper"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/StudentWeis/minesweeper"
 
 [dependencies]
 bevy = "0.17"
@@ -15,4 +16,9 @@ opt-level = 3
 
 [profile.release]
 codegen-units = 1
+lto = "thin"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
 lto = "thin"
